@@ -1,4 +1,4 @@
-package gtoken.com.nep2.Util;
+package gtoken.com.nep2.util;
 
 /**
  * Created by furyvn on 3/6/18.

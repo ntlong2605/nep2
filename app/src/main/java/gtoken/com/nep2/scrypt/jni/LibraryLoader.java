@@ -1,6 +1,6 @@
 // Copyright (C) 2011 - Will Glozer.  All rights reserved.
 
-package gtoken.com.nep2.Scrypt.jni;
+package gtoken.com.nep2.scrypt.jni;
 
 /**
  * A {@code LibraryLoader} attempts to load the appropriate native library

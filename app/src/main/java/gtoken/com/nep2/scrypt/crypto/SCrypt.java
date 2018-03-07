@@ -1,6 +1,6 @@
 // Copyright (C) 2011 - Will Glozer.  All rights reserved.
 
-package gtoken.com.nep2.Scrypt.crypto;
+package gtoken.com.nep2.scrypt.crypto;
 
 
 import java.security.GeneralSecurityException;
@@ -9,8 +9,8 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 
-import gtoken.com.nep2.Scrypt.jni.LibraryLoader;
-import gtoken.com.nep2.Scrypt.jni.LibraryLoaders;
+import gtoken.com.nep2.scrypt.jni.LibraryLoader;
+import gtoken.com.nep2.scrypt.jni.LibraryLoaders;
 
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.System.arraycopy;

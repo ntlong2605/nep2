@@ -1,14 +1,14 @@
 // Copyright (C) 2011 - Will Glozer.  All rights reserved.
 
-package gtoken.com.nep2.Scrypt.crypto;
+package gtoken.com.nep2.scrypt.crypto;
 
 import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 
 
-import static gtoken.com.nep2.Scrypt.codec.Base64.decode;
-import static gtoken.com.nep2.Scrypt.codec.Base64.encode;
+import static gtoken.com.nep2.scrypt.codec.Base64.decode;
+import static gtoken.com.nep2.scrypt.codec.Base64.encode;
 
 /**
  * Simple {@link SCrypt} interface for hashing passwords using the

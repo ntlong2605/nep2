@@ -15,9 +15,9 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
-import gtoken.com.nep2.Util.Base58;
-import gtoken.com.nep2.Util.SHA256HashUtil;
-import gtoken.com.nep2.Scrypt.crypto.SCryptUtil;
+import gtoken.com.nep2.util.Base58;
+import gtoken.com.nep2.util.SHA256HashUtil;
+import gtoken.com.nep2.scrypt.crypto.SCryptUtil;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -172,7 +172,7 @@ public class MainActivity extends AppCompatActivity {
         return output;
     }
 
-    private byte[] doAES256Decrypt(byte[] input, byte[] key){
+    private byte[] doAES256Decrypt(byte[] input, byte[] key) {
         byte[] output = null;
         try {
             SecretKeySpec keySpec = new SecretKeySpec(key, "AES");

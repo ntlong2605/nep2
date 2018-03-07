@@ -1,6 +1,6 @@
 // Copyright (C) 2011 - Will Glozer.  All rights reserved.
 
-package gtoken.com.nep2.Scrypt.codec;
+package gtoken.com.nep2.scrypt.codec;
 
 import java.util.Arrays;
 
