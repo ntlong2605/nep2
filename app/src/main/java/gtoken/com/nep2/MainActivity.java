@@ -115,23 +115,38 @@ public class MainActivity extends AppCompatActivity {
         byte[] encryptedhalf2 = doAES256Encrypt(xor2, derivedhalf2);
         Log.d(TAG, "encryptedhalf2=" + Arrays.toString(encryptedhalf2) + " ,length=" + encryptedhalf2.length);
 
+        byte[] xor = new byte[32];
+        for (int i = 0; i < 32; i++) {
+            xor[i] = (byte) (privateKeyByteArray[i] ^ derivedhalf1[i]);
+        }
+
+        byte[] encryptedkey = doAES256Encrypt(xor, derivedhalf2);
+
+        Log.d(TAG, "encryptedkey=" + Arrays.toString(encryptedkey) + " ,length=" + encryptedkey.length);
+
         //Combine into one: 0x01 0x42 + flagbyte + salt + encryptedhalf1 + encryptedhalf2
-        byte[] prefix1 = hexStringToByteArray("01");
-        byte[] prefix2 = hexStringToByteArray("42");
+        byte[] prefix = hexStringToByteArray("0142");
         byte[] flagbyte = hexStringToByteArray("E0");
-        ByteBuffer bb = ByteBuffer.allocate(prefix1.length + prefix2.length + flagbyte.length + salt.length + encryptedhalf1.length + encryptedhalf2.length);
-        bb.put(prefix1);
-        bb.put(prefix2);
+        ByteBuffer bb = ByteBuffer.allocate(prefix.length + flagbyte.length + salt.length + encryptedkey.length);
+        bb.put(prefix);
         bb.put(flagbyte);
         bb.put(salt);
-        bb.put(encryptedhalf1);
-        bb.put(encryptedhalf2);
-        byte[] encryptedPrivateKey = bb.array();
+        bb.put(encryptedkey);
+        byte[] buffer = bb.array();
+
+        byte[] u8Hash = SHA256HashUtil.getDoubleSHA256Hash(buffer);
+        byte[] subU8Hash = new byte[4];
+        System.arraycopy(u8Hash, 0, subU8Hash, 0, 4);
+        ByteBuffer bb2 = ByteBuffer.allocate(buffer.length + 4);
+        bb2.put(buffer);
+        bb2.put(subU8Hash);
+
+        byte[] encryptedPrivateKey = bb2.array();
+
 
         Log.d(TAG, "encryptedPrivateKey=" + Arrays.toString(encryptedPrivateKey) + " ,length=" + encryptedPrivateKey.length);
-        Log.d(TAG, "Base58 encryptedPrivateKey=" + Base58.encode(encryptedPrivateKey));
-
-        decrypt(salt, encryptedhalf1, encryptedhalf2);
+        String base58 = Base58.encode(encryptedPrivateKey);
+        Log.d(TAG, "Base58 encryptedPrivateKey=" + base58 + " ,length=" + base58.length());
 
     }
 
