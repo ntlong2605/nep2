@@ -55,7 +55,6 @@ public class MainActivity extends AppCompatActivity {
         /*
          * Step 1: Compute the NEO address (ASCII), and take the first four bytes of SHA256(SHA256()) of it. Let's call this "addresshash".
          */
-
         byte[] doubleSHA256Hash = SHA256HashUtil.getDoubleSHA256Hash(mAddress.getBytes());
         Log.d(TAG, "doubleSHA256Hash=" + Arrays.toString(doubleSHA256Hash));
 
@@ -65,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "salt=" + Arrays.toString(salt));
 
         /*
-         * Step 2: Derive a key from the passphrase using scrypt
+         * Step 2: Derive a key from the passphrase using Scrypt
          */
         byte[] scryptKey = SCryptUtil.scrypt(mPassphrase, salt, N, r, p);
         Log.d(TAG, "scryptKey=" + Arrays.toString(scryptKey) + " ,length=" + scryptKey.length);
@@ -73,58 +72,25 @@ public class MainActivity extends AppCompatActivity {
         //Split derive key into 2 parts
         byte[] derivedhalf1 = Arrays.copyOfRange(scryptKey, 0, 32);
         byte[] derivedhalf2 = Arrays.copyOfRange(scryptKey, 32, 64);
-
         Log.d(TAG, "derivedhalf1=" + Arrays.toString(derivedhalf1) + " ,length=" + derivedhalf1.length);
         Log.d(TAG, "derivedhalf2=" + Arrays.toString(derivedhalf2) + " ,length=" + derivedhalf2.length);
 
         /*
-         * Step 3: out encryptedhalf1, encryptedhalf2
+         * Step 3: out encryptedkey
          */
         //Split private key into 2 parts privkey[0...15] and privkey[16...31]
         byte[] privateKeyByteArray = hexStringToByteArray(mRawPrivateKey);
         Log.d(TAG, "privateKeyByteArray=" + Arrays.toString(privateKeyByteArray) + " ,length=" + privateKeyByteArray.length);
 
-        byte[] privkey1 = Arrays.copyOfRange(privateKeyByteArray, 0, 16);
-        byte[] privkey2 = Arrays.copyOfRange(privateKeyByteArray, 16, 32);
-        Log.d(TAG, "privkey1=" + Arrays.toString(privkey1) + " ,length=" + privkey1.length);
-        Log.d(TAG, "privkey2=" + Arrays.toString(privkey2) + " ,length=" + privkey2.length);
-
-        //Split derivedhalf1 into 2 parts
-        byte[] derivedhalf1_1 = Arrays.copyOfRange(derivedhalf1, 0, 16);
-        Log.d(TAG, "derivedhalf1_1=" + Arrays.toString(derivedhalf1_1) + " ,length=" + derivedhalf1_1.length);
-        byte[] derivedhalf1_2 = Arrays.copyOfRange(derivedhalf1, 16, 32);
-        Log.d(TAG, "derivedhalf1_2=" + Arrays.toString(derivedhalf1_2) + " ,length=" + derivedhalf1_2.length);
-
-        //XOR 1: privkey[0...15] xor derivedhalf1[0...15]
-        byte[] xor1 = new byte[16];
-        for (int i = 0; i < 16; i++) {
-            xor1[i] = (byte) (privkey1[i] ^ derivedhalf1_1[i]);
-        }
-        Log.d(TAG, "xor1=" + Arrays.toString(xor1) + " ,length=" + xor1.length);
-
-        //XOR 2: privkey[16...31] xor derivedhalf1[16...31]
-        byte[] xor2 = new byte[16];
-        for (int i = 0; i < 16; i++) {
-            xor2[i] = (byte) (privkey2[i] ^ derivedhalf1_2[i]);
-        }
-        Log.d(TAG, "xor2=" + Arrays.toString(xor2) + " ,length=" + xor2.length);
-
         //Do AES256 encrypt
-        byte[] encryptedhalf1 = doAES256Encrypt(xor1, derivedhalf2);
-        Log.d(TAG, "encryptedhalf1=" + Arrays.toString(encryptedhalf1) + " ,length=" + encryptedhalf1.length);
-        byte[] encryptedhalf2 = doAES256Encrypt(xor2, derivedhalf2);
-        Log.d(TAG, "encryptedhalf2=" + Arrays.toString(encryptedhalf2) + " ,length=" + encryptedhalf2.length);
-
         byte[] xor = new byte[32];
         for (int i = 0; i < 32; i++) {
             xor[i] = (byte) (privateKeyByteArray[i] ^ derivedhalf1[i]);
         }
-
         byte[] encryptedkey = doAES256Encrypt(xor, derivedhalf2);
-
         Log.d(TAG, "encryptedkey=" + Arrays.toString(encryptedkey) + " ,length=" + encryptedkey.length);
 
-        //Combine into one: 0x01 0x42 + flagbyte + salt + encryptedhalf1 + encryptedhalf2
+        //Combine into one: 0x01 0x42 + flagbyte + salt + encryptedkey
         byte[] prefix = hexStringToByteArray("0142");
         byte[] flagbyte = hexStringToByteArray("E0");
         ByteBuffer bb = ByteBuffer.allocate(prefix.length + flagbyte.length + salt.length + encryptedkey.length);
@@ -134,20 +100,18 @@ public class MainActivity extends AppCompatActivity {
         bb.put(encryptedkey);
         byte[] buffer = bb.array();
 
+        //Add checksum
         byte[] u8Hash = SHA256HashUtil.getDoubleSHA256Hash(buffer);
         byte[] subU8Hash = new byte[4];
-        System.arraycopy(u8Hash, 0, subU8Hash, 0, 4);
-        ByteBuffer bb2 = ByteBuffer.allocate(buffer.length + 4);
+        System.arraycopy(u8Hash, 0, subU8Hash, 0, subU8Hash.length);
+        ByteBuffer bb2 = ByteBuffer.allocate(buffer.length + subU8Hash.length);
         bb2.put(buffer);
         bb2.put(subU8Hash);
-
         byte[] encryptedPrivateKey = bb2.array();
-
 
         Log.d(TAG, "encryptedPrivateKey=" + Arrays.toString(encryptedPrivateKey) + " ,length=" + encryptedPrivateKey.length);
         String base58 = Base58.encode(encryptedPrivateKey);
         Log.d(TAG, "Base58 encryptedPrivateKey=" + base58 + " ,length=" + base58.length());
-
     }
 
     private void decrypt(byte[] salt, byte[] encryptedhalf1, byte[] encryptedhalf2) {
