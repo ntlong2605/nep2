@@ -32,15 +32,13 @@ public class MainActivity extends AppCompatActivity {
     private static final int N = 16384;
     private static final int r = 8;
     private static final int p = 8;
-    private static final int length = 64;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //encrypt();
 
+        encrypt(mAddress, mPassphrase);
         decrypt(mPassphrase, mEncryptedNEP2);
     }
 
@@ -55,11 +53,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void encrypt() {
+    private void encrypt(String address, String passPhrase) {
         /*
          * Step 1: Compute the NEO address (ASCII), and take the first four bytes of SHA256(SHA256()) of it. Let's call this "addresshash".
          */
-        byte[] doubleSHA256Hash = SHA256HashUtil.getDoubleSHA256Hash(mAddress.getBytes());
+        byte[] doubleSHA256Hash = SHA256HashUtil.getDoubleSHA256Hash(address.getBytes());
         Log.d(TAG, "doubleSHA256Hash=" + Arrays.toString(doubleSHA256Hash));
 
         //get the first 4 bytes
@@ -70,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
         /*
          * Step 2: Derive a key from the passphrase using Scrypt
          */
-        byte[] scryptKey = SCryptUtil.scrypt(mPassphrase, salt, N, r, p);
+        byte[] scryptKey = SCryptUtil.scrypt(passPhrase, salt, N, r, p);
         Log.d(TAG, "scryptKey=" + Arrays.toString(scryptKey) + " ,length=" + scryptKey.length);
 
         //Split derive key into 2 parts
@@ -86,21 +84,18 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "privateKeyByteArray=" + Arrays.toString(privateKeyByteArray) + " ,length=" + privateKeyByteArray.length);
 
         //Do AES256 encrypt
-        byte[] xor = new byte[32];
-        for (int i = 0; i < 32; i++) {
-            xor[i] = (byte) (privateKeyByteArray[i] ^ derivedhalf1[i]);
-        }
-        byte[] encryptedkey = doAES256Encrypt(xor, derivedhalf2);
-        Log.d(TAG, "encryptedkey=" + Arrays.toString(encryptedkey) + " ,length=" + encryptedkey.length);
+        byte[] xor = doXor(privateKeyByteArray, derivedhalf1);
+        byte[] encryptedKey = doAES256Encrypt(xor, derivedhalf2);
+        Log.d(TAG, "encryptedkey=" + Arrays.toString(encryptedKey) + " ,length=" + encryptedKey.length);
 
         //Combine into one: 0x01 0x42 + flagbyte + salt + encryptedkey
         byte[] prefix = hexStringToByteArray("0142");
         byte[] flagbyte = hexStringToByteArray("E0");
-        ByteBuffer bb = ByteBuffer.allocate(prefix.length + flagbyte.length + salt.length + encryptedkey.length);
+        ByteBuffer bb = ByteBuffer.allocate(prefix.length + flagbyte.length + salt.length + encryptedKey.length);
         bb.put(prefix);
         bb.put(flagbyte);
         bb.put(salt);
-        bb.put(encryptedkey);
+        bb.put(encryptedKey);
         byte[] payload = bb.array();
 
         //Add checksum
@@ -131,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "encryptedPrivateKey=" + Arrays.toString(encryptedPrivateKey) + " ,length=" + encryptedPrivateKey.length);
 
         //Devive Scrypt key
-        byte[] scryptKey = SCryptUtil.scrypt(mPassphrase, salt, N, r, p);
+        byte[] scryptKey = SCryptUtil.scrypt(passPhrase, salt, N, r, p);
         Log.d(TAG, "scryptKey=" + Arrays.toString(scryptKey) + "length=" + scryptKey.length);
 
         //Split derive key into 2 parts
