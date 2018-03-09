@@ -28,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String mAddress = "AXoxAX2eJfJ1shNpWqUxRh3RWNUJqvQvVa";
     private static final String mPassphrase = "Satoshi";
     private static final String mEncryptedNEP2 = "6PYN6mjwYfjPUuYT3Exajvx25UddFVLpCw4bMsmtLdnKwZ9t1Mi3CfKe8S";
+    private static final String mWIF = "KwYgW8gcxj1JWJXhPSu4Fqwzfhp5Yfi42mdYmMa4XqK7NJxXUSK7";
 
     private static final int N = 16384;
     private static final int r = 8;
@@ -38,8 +39,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        encrypt(mAddress, mPassphrase);
-        decrypt(mPassphrase, mEncryptedNEP2);
+        //encrypt(mAddress, mPassphrase);
+        //decrypt(mPassphrase, mEncryptedNEP2);
+        privateKeyToWIF(mRawPrivateKey);
+        wifToPrivateKey(mWIF);
     }
 
     public byte[] hexStringToByteArray(String s) {
@@ -194,6 +197,59 @@ public class MainActivity extends AppCompatActivity {
             hexChars[j * 2 + 1] = hexArray[v & 0x0F];
         }
         return new String(hexChars);
+    }
+
+
+    /**
+     * ref link: https://bitcointalk.org/index.php?topic=129652.0
+     * If you need to accept WIF as input, after the base58decode step, you'll always have 33 or 34 bytes.
+     * If 33 bytes, it is uncompressed, and the private key is the 32 bytes after the 0x80 header.
+     * If 34 bytes, it is compressed, the last byte must be 0x01, and the private key is everything between the 0x80 header and the 0x01 compression flag.
+     * Once you have the private key and know whether the compression flag was present or not, you can calculate the public key and address as above.
+     */
+    public void privateKeyToWIF(String rawPrivateKey) {
+
+        byte[] privateKey = hexStringToByteArray(rawPrivateKey);
+        Log.d(TAG, "privateKey=" + Arrays.toString(privateKey) + " ,length=" + privateKey.length);
+
+        //Add 0x80 byte to the front, add 0x01 to the end
+        byte[] versionByte = hexStringToByteArray("80");
+        byte[] lastByte = hexStringToByteArray("01");
+        ByteBuffer bb = ByteBuffer.allocate(privateKey.length + versionByte.length + lastByte.length);
+        bb.put(versionByte);
+        bb.put(privateKey);
+        bb.put(lastByte);
+        byte[] versionByteAndPrivateKey = bb.array();
+        Log.d(TAG, "versionByteAndPrivateKey=" + Arrays.toString(versionByteAndPrivateKey) + " ,length=" + versionByteAndPrivateKey.length);
+
+        //double hash
+        byte[] double256Hash = SHA256HashUtil.getDoubleSHA256Hash(versionByteAndPrivateKey);
+
+        //get checksum
+        byte[] checkSum = Arrays.copyOfRange(double256Hash, 0, 4);
+        Log.d(TAG, "checkSum=" + Arrays.toString(checkSum) + " ,length=" + checkSum.length);
+
+        //Adding checksum at the end of addedByteAndPrivateKey
+        ByteBuffer bb2 = ByteBuffer.allocate(versionByteAndPrivateKey.length + checkSum.length);
+        bb2.put(versionByteAndPrivateKey);
+        bb2.put(checkSum);
+        byte[] wif = bb2.array();
+
+        Log.d(TAG, "wif=" + Arrays.toString(wif) + " ,length=" + wif.length);
+
+        //Encode Base58
+        Log.d(TAG, "WIF=" + Base58.encode(wif));
+
+    }
+
+    public void wifToPrivateKey(String wif) {
+        byte[] wifByteArray = Base58.decode(wif);
+
+        //remove the first, the last byte and checksum
+        byte[] privateKey = Arrays.copyOfRange(wifByteArray, 1, 33);
+
+        Log.d(TAG, "private key=" + bytesToHex(privateKey));
+
     }
 
 
