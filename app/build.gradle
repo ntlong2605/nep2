@@ -9,6 +9,7 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        multiDexEnabled true
     }
     buildTypes {
         release {
@@ -28,4 +29,5 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
     compile 'org.apache.commons:commons-lang3:3.7'
     compile group: 'com.lambdaworks', name: 'scrypt', version: '1.4.0'
+    compile 'org.bitcoinj:bitcoinj-core:0.14.6'
 }

@@ -4,6 +4,12 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.TestNet3Params;
+
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -41,8 +47,9 @@ public class MainActivity extends AppCompatActivity {
 
         //encrypt(mAddress, mPassphrase);
         //decrypt(mPassphrase, mEncryptedNEP2);
-        privateKeyToWIF(mRawPrivateKey);
-        wifToPrivateKey(mWIF);
+        //privateKeyToWIF(mRawPrivateKey);
+        //wifToPrivateKey(mWIF);
+        genPublicKeyAndAddress();
     }
 
     public byte[] hexStringToByteArray(String s) {
@@ -207,7 +214,11 @@ public class MainActivity extends AppCompatActivity {
      * If 34 bytes, it is compressed, the last byte must be 0x01, and the private key is everything between the 0x80 header and the 0x01 compression flag.
      * Once you have the private key and know whether the compression flag was present or not, you can calculate the public key and address as above.
      */
-    public void privateKeyToWIF(String rawPrivateKey) {
+
+    /**
+     * 0x01 compression flag, if we add lastByte to the end, function will out compressed WTF, otherwise uncompressed
+     */
+    private void privateKeyToWIF(String rawPrivateKey) {
 
         byte[] privateKey = hexStringToByteArray(rawPrivateKey);
         Log.d(TAG, "privateKey=" + Arrays.toString(privateKey) + " ,length=" + privateKey.length);
@@ -242,7 +253,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void wifToPrivateKey(String wif) {
+    private void wifToPrivateKey(String wif) {
         byte[] wifByteArray = Base58.decode(wif);
 
         //remove the first, the last byte and checksum
@@ -250,6 +261,36 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(TAG, "private key=" + bytesToHex(privateKey));
 
+    }
+
+    private void genPublicKeyAndAddress() {
+        // An example of private key from the book 'Mastering Bitcoin'
+        String wif = "c2e79befd0fa901fda7839fcbb80dbe51cf5a710eca3ff185ba78e6a7a473193";
+
+        byte[] key = hexStringToByteArray(wif);
+
+        // Creating a key object from our private key, with compressed public key
+        ECKey k1 = ECKey.fromPrivate(key, true);
+
+        // Creating a key object from our private key, with uncompressed public key
+        ECKey k2 = ECKey.fromPrivate(key, false);
+
+
+        Log.d(TAG, "compressed public address=" + k1.getPublicKeyAsHex()); // compressed
+        Log.d(TAG, "uncompressed public address=" + k2.getPublicKeyAsHex()); // uncompressed
+
+        NetworkParameters main = MainNetParams.get();   // main bitcoin network
+        NetworkParameters test = TestNet3Params.get();  // genPublicKeyAndAddress bitcoin network
+
+        Address addr1 = k1.toAddress(main); // main network, compressed
+        Address addr2 = k1.toAddress(test); // genPublicKeyAndAddress network, compressed
+        Address addr3 = k2.toAddress(main); // main network, uncompressed
+        Address addr4 = k2.toAddress(test); // genPublicKeyAndAddress network, uncompressed
+
+        Log.d(TAG, "main network, compressed=" + addr1.toString());
+        Log.d(TAG, "test network, compressed=" + addr2.toString());
+        Log.d(TAG, "main network, uncompressed=" + addr3.toString());
+        Log.d(TAG, "test network, uncompressed=" + addr4.toString());
     }
 
 
