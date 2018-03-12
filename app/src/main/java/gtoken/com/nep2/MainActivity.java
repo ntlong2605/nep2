@@ -263,9 +263,12 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    /**
+     * https://brainwalletx.github.io/#generator --> test tool
+     */
     private void genPublicKeyAndAddress() {
         // An example of private key from the book 'Mastering Bitcoin'
-        String wif = "c2e79befd0fa901fda7839fcbb80dbe51cf5a710eca3ff185ba78e6a7a473193";
+        String wif = "a71b25fd2fcf01eb3a4496405ce53f896ec075d1c9386f26e52805676b1953e2";
 
         byte[] key = hexStringToByteArray(wif);
 
@@ -282,10 +285,10 @@ public class MainActivity extends AppCompatActivity {
         NetworkParameters main = MainNetParams.get();   // main bitcoin network
         NetworkParameters test = TestNet3Params.get();  // genPublicKeyAndAddress bitcoin network
 
-        Address addr1 = k1.toAddress(main); // main network, compressed
-        Address addr2 = k1.toAddress(test); // genPublicKeyAndAddress network, compressed
-        Address addr3 = k2.toAddress(main); // main network, uncompressed
-        Address addr4 = k2.toAddress(test); // genPublicKeyAndAddress network, uncompressed
+        Address addr1 = k1.toAddress(main); // main/live network, compressed
+        Address addr2 = k1.toAddress(test); // test network, compressed
+        Address addr3 = k2.toAddress(main); // main/live network, uncompressed
+        Address addr4 = k2.toAddress(test); // test network, uncompressed
 
         Log.d(TAG, "main network, compressed=" + addr1.toString());
         Log.d(TAG, "test network, compressed=" + addr2.toString());
