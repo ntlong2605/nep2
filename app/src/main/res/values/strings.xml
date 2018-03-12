@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">NEP2</string>
     <string name="action_settings">Settings</string>
+    <string name="enter_a_passphrase">Enter a passphrase</string>
+    <string name="create_wallet">Create Wallet</string>
+    <string name="output_json">Output new wallet JSON</string>
+    <string name="output_restore_son">Output restore wallet JSON</string>
+    <string name="restore_wallet">RESTORE WALLET</string>
 </resources>

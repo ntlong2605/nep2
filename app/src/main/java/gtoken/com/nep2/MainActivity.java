@@ -1,8 +1,22 @@
 package gtoken.com.nep2;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Environment;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.gson.Gson;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
@@ -10,10 +24,16 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -21,6 +41,10 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
+import gtoken.com.nep2.object.Account;
+import gtoken.com.nep2.object.Contract;
+import gtoken.com.nep2.object.ScryptParam;
+import gtoken.com.nep2.object.Wallet;
 import gtoken.com.nep2.scrypt.crypto.SCryptUtil;
 import gtoken.com.nep2.util.Base58;
 import gtoken.com.nep2.util.SHA256HashUtil;
@@ -40,19 +64,108 @@ public class MainActivity extends AppCompatActivity {
     private static final int r = 8;
     private static final int p = 8;
 
+    private EditText mUserPassPhrase;
+    private Button mCreateWallet, mRestoreWallet;
+    private TextView mCreatedJsonView, mRestoreJsonView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //encrypt(mAddress, mPassphrase);
-        //decrypt(mPassphrase, mEncryptedNEP2);
-        //privateKeyToWIF(mRawPrivateKey);
-        //wifToPrivateKey(mWIF);
-        genPublicKeyAndAddress();
+        mUserPassPhrase = findViewById(R.id.user_passphrase);
+        mCreateWallet = findViewById(R.id.btn_create_wallet);
+        mRestoreWallet = findViewById(R.id.btn_restore_wallet);
+        mCreatedJsonView = findViewById(R.id.output_json);
+        mRestoreJsonView = findViewById(R.id.output_restore_json);
+
+        mCreateWallet.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                String userPassPhrase = mUserPassPhrase.getText().toString();
+                if (!TextUtils.isEmpty(userPassPhrase)) {
+                    if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.WRITE_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+                    } else {
+                        createWallet(userPassPhrase);
+                    }
+                } else {
+                    Toast.makeText(MainActivity.this, "Passphrase cannot be empty", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        mRestoreWallet.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
     }
 
-    public byte[] hexStringToByteArray(String s) {
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode){
+            case 0:
+                createWallet(mUserPassPhrase.getText().toString());
+                break;
+        }
+    }
+
+    private void writeJsonToFile(String json) {
+        String filename = "wallet.json";
+        String filepath = "/NEOCrypto";
+
+        File sdCard = Environment.getExternalStorageDirectory();
+        File dir = new File(sdCard.getAbsolutePath() + filepath);
+        dir.mkdirs();
+        File jsonWallet = new File(dir, filename);
+
+        try {
+            FileOutputStream fos = new FileOutputStream(jsonWallet);
+            fos.write(json.getBytes());
+            fos.close();
+            Toast.makeText(MainActivity.this, "wallet.json created at " + jsonWallet.getPath(), Toast.LENGTH_SHORT).show();
+            Log.d(TAG, "wallet.json created at " + jsonWallet.getPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void createWallet(String userPassPhrase) {
+
+        String address = genPublicKeyAndAddress(privateKeyToWIF(genPrivateKeyRandomly()));
+        String encryptedNEP2 = encrypt(address, userPassPhrase);
+
+        ScryptParam scryptParam = new ScryptParam(16384, 8, 8);
+        List<Account> accountList = new ArrayList<>();
+        Account account = new Account(address, "null", false, false, encryptedNEP2, new Contract(), "null");
+        accountList.add(account);
+
+        Wallet wallet = new Wallet();
+        wallet.setName("MyWallet");
+        wallet.setVersion("1.0");
+        wallet.setScrypt(scryptParam);
+        wallet.setAccounts(accountList);
+        wallet.setExtra("null");
+
+        Gson gson = new Gson();
+        String json = gson.toJson(wallet);
+        mCreatedJsonView.setText(json);
+
+        writeJsonToFile(json);
+
+    }
+
+    private String genPrivateKeyRandomly() {
+        SecureRandom random = new SecureRandom();
+        byte[] privateKey = new byte[32];
+        random.nextBytes(privateKey);
+        return bytesToHex(privateKey);
+    }
+
+    private byte[] hexStringToByteArray(String s) {
         int len = s.length();
         byte[] data = new byte[len / 2];
         for (int i = 0; i < len; i += 2) {
@@ -63,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void encrypt(String address, String passPhrase) {
+    private String encrypt(String address, String passPhrase) {
         /*
          * Step 1: Compute the NEO address (ASCII), and take the first four bytes of SHA256(SHA256()) of it. Let's call this "addresshash".
          */
@@ -120,9 +233,11 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "encryptedPrivateKey=" + Arrays.toString(encryptedPrivateKey) + " ,length=" + encryptedPrivateKey.length);
         String base58 = Base58.encode(encryptedPrivateKey);
         Log.d(TAG, "Base58 encryptedPrivateKey=" + base58 + " ,length=" + base58.length());
+
+        return base58;
     }
 
-    private void decrypt(String passPhrase, String encryptedNEP2) {
+    private String decrypt(String passPhrase, String encryptedNEP2) {
 
         //decrypt payload
         byte[] decryptedPayload = Base58.decode(encryptedNEP2);
@@ -150,8 +265,10 @@ public class MainActivity extends AppCompatActivity {
 
         //form private key
         byte[] privateKeyByteArray = doXor(xor, derivedhalf1);
+        String rawPrivateKey = bytesToHex(privateKeyByteArray);
+        Log.d(TAG, "raw private key=" + rawPrivateKey);
 
-        Log.d(TAG, "raw private key=" + bytesToHex(privateKeyByteArray));
+        return rawPrivateKey;
 
     }
 
@@ -207,7 +324,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    /**
+    /*
      * ref link: https://bitcointalk.org/index.php?topic=129652.0
      * If you need to accept WIF as input, after the base58decode step, you'll always have 33 or 34 bytes.
      * If 33 bytes, it is uncompressed, and the private key is the 32 bytes after the 0x80 header.
@@ -218,7 +335,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 0x01 compression flag, if we add lastByte to the end, function will out compressed WTF, otherwise uncompressed
      */
-    private void privateKeyToWIF(String rawPrivateKey) {
+    private String privateKeyToWIF(String rawPrivateKey) {
 
         byte[] privateKey = hexStringToByteArray(rawPrivateKey);
         Log.d(TAG, "privateKey=" + Arrays.toString(privateKey) + " ,length=" + privateKey.length);
@@ -251,6 +368,8 @@ public class MainActivity extends AppCompatActivity {
         //Encode Base58
         Log.d(TAG, "WIF=" + Base58.encode(wif));
 
+        return Base58.encode(wif);
+
     }
 
     private void wifToPrivateKey(String wif) {
@@ -266,9 +385,9 @@ public class MainActivity extends AppCompatActivity {
     /**
      * https://brainwalletx.github.io/#generator --> test tool
      */
-    private void genPublicKeyAndAddress() {
+    private String genPublicKeyAndAddress(String wif) {
         // An example of private key from the book 'Mastering Bitcoin'
-        String wif = "a71b25fd2fcf01eb3a4496405ce53f896ec075d1c9386f26e52805676b1953e2";
+        //wif = "a71b25fd2fcf01eb3a4496405ce53f896ec075d1c9386f26e52805676b1953e2";
 
         byte[] key = hexStringToByteArray(wif);
 
@@ -294,6 +413,8 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "test network, compressed=" + addr2.toString());
         Log.d(TAG, "main network, uncompressed=" + addr3.toString());
         Log.d(TAG, "test network, uncompressed=" + addr4.toString());
+
+        return addr1.toString();
     }
 
 
