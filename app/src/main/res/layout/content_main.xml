@@ -38,13 +38,23 @@
             android:gravity="start"
             android:text="@string/output_json" />
 
+        <TextView
+            android:id="@+id/create_new_private_key"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/output_json"
+            android:layout_marginTop="20dp"
+            android:gravity="start"
+            android:text="@string/created_private_key" />
+
 
         <Button
             android:id="@+id/btn_restore_wallet"
             android:layout_width="wrap_content"
             android:layout_height="50dp"
-            android:layout_below="@id/output_json"
+            android:layout_below="@id/create_new_private_key"
             android:layout_centerHorizontal="true"
+            android:layout_marginTop="20dp"
             android:text="@string/restore_wallet" />
 
         <TextView
@@ -55,6 +65,15 @@
             android:layout_marginTop="20dp"
             android:gravity="start"
             android:text="@string/output_restore_son" />
+
+        <TextView
+            android:id="@+id/restore_private_key"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/output_restore_json"
+            android:layout_marginTop="20dp"
+            android:gravity="start"
+            android:text="@string/restore_private_key" />
 
     </RelativeLayout>
 

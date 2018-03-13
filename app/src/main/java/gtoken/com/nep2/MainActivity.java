@@ -1,6 +1,7 @@
 package gtoken.com.nep2;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
@@ -25,9 +26,13 @@ import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -66,7 +71,9 @@ public class MainActivity extends AppCompatActivity {
 
     private EditText mUserPassPhrase;
     private Button mCreateWallet, mRestoreWallet;
-    private TextView mCreatedJsonView, mRestoreJsonView;
+    private TextView mCreatedJsonView, mRestoreJsonView, mCreatedPrivateKey, mRestorePrivateKey;
+
+    private static final int PICK_FILES_REQUEST_CODE = 1111;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
         mRestoreWallet = findViewById(R.id.btn_restore_wallet);
         mCreatedJsonView = findViewById(R.id.output_json);
         mRestoreJsonView = findViewById(R.id.output_restore_json);
+        mCreatedPrivateKey = findViewById(R.id.create_new_private_key);
+        mRestorePrivateKey = findViewById(R.id.restore_private_key);
 
         mCreateWallet.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -99,17 +108,83 @@ public class MainActivity extends AppCompatActivity {
         mRestoreWallet.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                openFile();
             }
         });
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        switch (requestCode){
+        switch (requestCode) {
             case 0:
                 createWallet(mUserPassPhrase.getText().toString());
                 break;
+        }
+    }
+
+    private void openFile() {
+        Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+        i.setType("*/*");
+        startActivityForResult(i, PICK_FILES_REQUEST_CODE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode == RESULT_OK) {
+            switch (requestCode) {
+                case PICK_FILES_REQUEST_CODE:
+
+                    String filePath = "", fileName = "";
+
+                    if (data != null && data.getData() != null) {
+                        filePath = data.getData().getPath();
+                        fileName = data.getData().getLastPathSegment();
+                        Log.d(TAG, "path=" + filePath);
+                        Log.d(TAG, "name=" + fileName);
+                    }
+
+                    if (!TextUtils.isEmpty(filePath)) {
+                        try {
+                            File jsonWallet = new File(filePath);
+                            FileInputStream stream = new FileInputStream(jsonWallet);
+                            String jsonStr;
+                            try {
+                                FileChannel fc = stream.getChannel();
+                                MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
+                                jsonStr = Charset.defaultCharset().decode(bb).toString();
+                                mRestoreJsonView.setText(jsonStr);
+                                Gson gson = new Gson();
+                                Wallet wallet = gson.fromJson(jsonStr, Wallet.class);
+
+                                //TODO: get the fist item just for testing
+                                String encryptedNEP2 = wallet.getAccounts().get(0).getKey();
+                                Log.d(TAG, "encryptedNEP2=" + encryptedNEP2);
+                                String userPassPhrase = mUserPassPhrase.getText().toString();
+                                Log.d(TAG, "userPassPhrase=" + userPassPhrase);
+
+                                if (!TextUtils.isEmpty(userPassPhrase) && !TextUtils.isEmpty(encryptedNEP2)) {
+                                    mRestorePrivateKey.setText(decrypt(userPassPhrase, encryptedNEP2));
+                                } else {
+                                    Toast.makeText(MainActivity.this, "userPassPhrase or encryptedNEP2 was empty", Toast.LENGTH_SHORT).show();
+                                }
+
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                Toast.makeText(MainActivity.this, "Cannot read file", Toast.LENGTH_SHORT).show();
+                            } finally {
+                                stream.close();
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Toast.makeText(MainActivity.this, "Cannot read file", Toast.LENGTH_SHORT).show();
+                        }
+
+                    } else {
+                        Toast.makeText(MainActivity.this, "Cannot read file", Toast.LENGTH_SHORT).show();
+                    }
+
+                    break;
+            }
         }
     }
 
@@ -134,9 +209,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void createWallet(String userPassPhrase) {
-
-        String address = genPublicKeyAndAddress(privateKeyToWIF(genPrivateKeyRandomly()));
-        String encryptedNEP2 = encrypt(address, userPassPhrase);
+        String privateKey = genPrivateKeyRandomly();
+        Log.d(TAG, "random private key=" + privateKey);
+        String address = genPublicKeyAndAddress(privateKeyToWIF(privateKey));
+        String encryptedNEP2 = encrypt(address, userPassPhrase, privateKey);
 
         ScryptParam scryptParam = new ScryptParam(16384, 8, 8);
         List<Account> accountList = new ArrayList<>();
@@ -153,9 +229,8 @@ public class MainActivity extends AppCompatActivity {
         Gson gson = new Gson();
         String json = gson.toJson(wallet);
         mCreatedJsonView.setText(json);
-
+        mCreatedPrivateKey.setText(privateKey);
         writeJsonToFile(json);
-
     }
 
     private String genPrivateKeyRandomly() {
@@ -176,7 +251,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private String encrypt(String address, String passPhrase) {
+    private String encrypt(String address, String passPhrase, String rawPrivateKey) {
         /*
          * Step 1: Compute the NEO address (ASCII), and take the first four bytes of SHA256(SHA256()) of it. Let's call this "addresshash".
          */
@@ -203,7 +278,7 @@ public class MainActivity extends AppCompatActivity {
         /*
          * Step 3: out encryptedkey
          */
-        byte[] privateKeyByteArray = hexStringToByteArray(mRawPrivateKey);
+        byte[] privateKeyByteArray = hexStringToByteArray(rawPrivateKey);
         Log.d(TAG, "privateKeyByteArray=" + Arrays.toString(privateKeyByteArray) + " ,length=" + privateKeyByteArray.length);
 
         //Do AES256 encrypt

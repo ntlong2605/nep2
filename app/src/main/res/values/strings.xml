@@ -6,4 +6,6 @@
     <string name="output_json">Output new wallet JSON</string>
     <string name="output_restore_son">Output restore wallet JSON</string>
     <string name="restore_wallet">RESTORE WALLET</string>
+    <string name="created_private_key">Created private key</string>
+    <string name="restore_private_key">Restored private key</string>
 </resources>
