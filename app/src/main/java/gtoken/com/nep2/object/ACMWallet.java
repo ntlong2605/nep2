@@ -2,6 +2,10 @@ package gtoken.com.nep2.object;
 
 import java.util.List;
 
+import neoutils.Wallet;
+
+import static neoutils.Neoutils.generatePublicKeyFromPrivateKey;
+
 /**
  * Created by furyvn on 3/12/18.
  */
@@ -13,6 +17,7 @@ public class ACMWallet {
     private ScryptParam scrypt;
     private List<Account> accounts;
     private String extra;
+
 
     public String getName() {
         return name;

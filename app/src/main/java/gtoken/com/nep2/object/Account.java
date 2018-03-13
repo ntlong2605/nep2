@@ -13,6 +13,9 @@ public class Account {
     private String key;
     private Contract contract;
     private String extra;
+    private String privateKey;
+    private String WIF;
+    private String publicKey;
 
     public Account(String address, String label, boolean isDefault, boolean lock, String key, Contract contract, String extra) {
         this.address = address;
@@ -78,5 +81,29 @@ public class Account {
 
     public void setExtra(String extra) {
         this.extra = extra;
+    }
+
+    public String getPrivateKey() {
+        return privateKey;
+    }
+
+    public void setPrivateKey(String privateKey) {
+        this.privateKey = privateKey;
+    }
+
+    public String getWIF() {
+        return WIF;
+    }
+
+    public void setWIF(String WIF) {
+        this.WIF = WIF;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public void setPublicKey(String publicKey) {
+        this.publicKey = publicKey;
     }
 }

@@ -31,4 +31,5 @@ dependencies {
     compile group: 'com.lambdaworks', name: 'scrypt', version: '1.4.0'
     compile 'org.bitcoinj:bitcoinj-core:0.14.6'
     compile 'com.google.code.gson:gson:2.8.2'
+    implementation project(':neoutils')
 }
