@@ -46,10 +46,10 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
+import gtoken.com.nep2.object.ACMWallet;
 import gtoken.com.nep2.object.Account;
 import gtoken.com.nep2.object.Contract;
 import gtoken.com.nep2.object.ScryptParam;
-import gtoken.com.nep2.object.Wallet;
 import gtoken.com.nep2.scrypt.crypto.SCryptUtil;
 import gtoken.com.nep2.util.Base58;
 import gtoken.com.nep2.util.SHA256HashUtil;
@@ -57,13 +57,6 @@ import gtoken.com.nep2.util.SHA256HashUtil;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
-
-    //Data just for testing
-    private static final String mRawPrivateKey = "09C2686880095B1A4C249EE3AC4EEA8A014F11E6F986D0B5025AC1F39AFBD9AE";
-    private static final String mAddress = "AXoxAX2eJfJ1shNpWqUxRh3RWNUJqvQvVa";
-    private static final String mPassphrase = "Satoshi";
-    private static final String mEncryptedNEP2 = "6PYN6mjwYfjPUuYT3Exajvx25UddFVLpCw4bMsmtLdnKwZ9t1Mi3CfKe8S";
-    private static final String mWIF = "KwYgW8gcxj1JWJXhPSu4Fqwzfhp5Yfi42mdYmMa4XqK7NJxXUSK7";
 
     private static final int N = 16384;
     private static final int r = 8;
@@ -154,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
                                 jsonStr = Charset.defaultCharset().decode(bb).toString();
                                 mRestoreJsonView.setText(jsonStr);
                                 Gson gson = new Gson();
-                                Wallet wallet = gson.fromJson(jsonStr, Wallet.class);
+                                ACMWallet wallet = gson.fromJson(jsonStr, ACMWallet.class);
 
                                 //TODO: get the fist item just for testing
                                 String encryptedNEP2 = wallet.getAccounts().get(0).getKey();
@@ -219,7 +212,7 @@ public class MainActivity extends AppCompatActivity {
         Account account = new Account(address, "null", false, false, encryptedNEP2, new Contract(), "null");
         accountList.add(account);
 
-        Wallet wallet = new Wallet();
+        ACMWallet wallet = new ACMWallet();
         wallet.setName("MyWallet");
         wallet.setVersion("1.0");
         wallet.setScrypt(scryptParam);
