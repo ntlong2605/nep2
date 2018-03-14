@@ -4,7 +4,7 @@ apply plugin: 'kotlin-android'
 android {
     compileSdkVersion 26
     defaultConfig {
-        applicationId "gtoken.com.nep2"
+        applicationId "com.gcox.wallet"
         minSdkVersion 15
         targetSdkVersion 26
         versionCode 1
